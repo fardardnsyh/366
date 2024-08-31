@@ -1,0 +1,6 @@
+{
+	"singleQuote": false,
+	"useTabs": true,
+	"semi": true,
+	"htmlWhitespaceSensitivity": "css"
+}

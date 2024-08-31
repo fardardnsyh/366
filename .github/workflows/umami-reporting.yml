@@ -1,0 +1,50 @@
+name: daily-umami-report
+
+on:
+  schedule:
+    # run once a month while its not fix to avoid spam
+    - cron: "30 17 1 * *"
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  umamiReport:
+    name: umami report
+    runs-on: ubuntu-latest
+
+    outputs:
+      umami_page_views: ${{ steps.umamiReportStep.outputs.pageViews }}
+      umami_report_file: ${{ steps.umamiReportStep.outputs.umamiReportFile }}
+      #  umami_report: ${{ steps.umamiReport.outputs.umamiReport }}
+      umami_one_line_report: ${{ steps.umamiReportStep.outputs.umamiOneLineReport }}
+
+    steps:
+      - name: Create Umami report
+        id: umamiReportStep
+        uses: boly38/action-umami-report@umami-server-2.9.0
+        with:
+          umami-server: https://${{secrets.UMAMI_HOST}}
+          umami-user: ${{secrets.UMAMI_USERNAME}}
+          umami-password: ${{secrets.UMAMI_PASSWORD}}
+          umami-site-domain: ${{secrets.UMAMI_SITE_DOMAIN}}
+          umami-report-file: "umamiReport.txt"
+        env:
+          UMAMI_CLIENT_TIMEOUT_MS: 50000
+      - name: Send Umami report to discord channel
+        uses: tsickert/discord-webhook@v4.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          content: ${{ steps.umamiReportStep.outputs.umamiOneLineReport }}
+          embed-title: "Umami report"
+          username: "umami report"
+          embed-description: "${{ steps.umamiReportStep.outputs.umamiReport }}"
+          embed-image-url: "https://raw.githubusercontent.com/umami-software/umami/master/src/assets/logo.svg"
+
+  nextJob:
+    needs: umamiReport
+    name: github action next job
+    runs-on: ubuntu-latest
+    steps:
+      - name: print var
+        run: |
+          echo "FROM umamiReport outputs: ${{ needs.umamiReport.outputs.umami_report_file }} and ${{ needs.umamiReport.outputs.umami_page_views }} pageviews "
